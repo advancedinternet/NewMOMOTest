@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Taco Invaders</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #4a4a4a;
+            background: #111;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            color: #fff;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        
+        let score = 0;
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 30,
+            width: 50,
+            height: 30,
+            speed: 5
+        };
+
+        const bullets = [];
+        const tacos = [];
+        const tacoRows = 4;
+        const tacoCols = 8;
+        const tacoWidth = 40;
+        const tacoHeight = 30;
+        const tacoSpacing = 60;
+
+        let gameLoop;
+        let keys = {};
+
+        // Initialize tacos
+        function initTacos() {
+            for (let i = 0; i < tacoRows; i++) {
+                for (let j = 0; j < tacoCols; j++) {
+                    tacos.push({
+                        x: j * tacoSpacing + 100,
+                        y: i * tacoSpacing + 50,
+                        width: tacoWidth,
+                        height: tacoHeight,
+                        direction: 1
+                    });
+                }
+            }
+        }
+
+        // Draw player (burrito shooter)
+        function drawPlayer() {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(player.x - player.width/2, player.y, player.width, player.height);
+        }
+
+        // Draw bullets (hot sauce)
+        function drawBullets() {
+            ctx.fillStyle = '#FF0000';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x - 2, bullet.y, 4, 10);
+            });
+        }
+
+        // Draw tacos
+        function drawTacos() {
+            tacos.forEach(taco => {
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.moveTo(taco.x, taco.y);
+                ctx.lineTo(taco.x + taco.width, taco.y);
+                ctx.lineTo(taco.x + taco.width/2, taco.y + taco.height);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        // Update game state
+        function update() {
+            // Move player
+            if (keys.ArrowLeft && player.x > player.width/2) {
+                player.x -= player.speed;
+            }
+            if (keys.ArrowRight && player.x < canvas.width - player.width/2) {
+                player.x += player.speed;
+            }
+
+            // Move bullets
+            bullets.forEach((bullet, index) => {
+                bullet.y -= 7;
+                if (bullet.y < 0) bullets.splice(index, 1);
+            });
+
+            // Move tacos
+            let moveDown = false;
+            tacos.forEach(taco => {
+                taco.x += taco.direction * 2;
+                if (taco.x > canvas.width - taco.width || taco.x < 0) {
+                    moveDown = true;
+                }
+            });
+
+            if (moveDown) {
+                tacos.forEach(taco => {
+                    taco.direction *= -1;
+                    taco.y += 20;
+                });
+            }
+
+            // Check collisions
+            bullets.forEach((bullet, bulletIndex) => {
+                tacos.forEach((taco, tacoIndex) => {
+                    if (bullet.x > taco.x && bullet.x < taco.x + taco.width &&
+                        bullet.y > taco.y && bullet.y < taco.y + taco.height) {
+                        bullets.splice(bulletIndex, 1);
+                        tacos.splice(tacoIndex, 1);
+                        score += 10;
+                        scoreElement.textContent = `Score: ${score}`;
+                    }
+                });
+            });
+
+            // Check game over
+            tacos.forEach(taco => {
+                if (taco.y + taco.height > player.y) {
+                    gameOver();
+                }
+            });
+
+            if (tacos.length === 0) {
+                victory();
+            }
+        }
+
+        function gameOver() {
+            cancelAnimationFrame(gameLoop);
+            ctx.fillStyle = '#FF0000';
+            ctx.font = '48px Arial';
+            ctx.fillText('Game Over!', canvas.width/2 - 100, canvas.height/2);
+        }
+
+        function victory() {
+            cancelAnimationFrame(gameLoop);
+            ctx.fillStyle = '#00FF00';
+            ctx.font = '48px Arial';
+            ctx.fillText('Victory!', canvas.width/2 - 70, canvas.height/2);
+        }
+
+        // Main game loop
+        function gameFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            update();
+            drawPlayer();
+            drawBullets();
+            drawTacos();
+            gameLoop = requestAnimationFrame(gameFrame);
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ') {
+                bullets.push({
+                    x: player.x,
+                    y: player.y
+                });
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Start game
+        initTacos();
+        gameFrame();
+    </script>
+</body>
+</html>
