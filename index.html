@@ -29,7 +29,7 @@
         let level = 1;
         let powerUpActive = false;
         let isGameOver = false;
-        let meltProgress = 0;
+        let meltColumns = [];
         
         const player = {
             x: canvas.width / 2,
@@ -44,8 +44,20 @@
         const tacos = [];
         const powerUps = [];
         const cheeseDrops = [];
-        const meltingCheese = [];
         
+        function initMeltColumns() {
+            meltColumns = [];
+            const columnWidth = 10;
+            for (let x = 0; x < canvas.width; x += columnWidth) {
+                meltColumns.push({
+                    x: x,
+                    y: 0,
+                    width: columnWidth,
+                    speed: 2 + Math.random() * 3
+                });
+            }
+        }
+
         const tacoTypes = [
             { color: '#FFD700', points: 10, cheeseRate: 0.001 },
             { color: '#FF4500', points: 20, cheeseRate: 0.002 },
@@ -132,27 +144,12 @@
             });
         }
 
-        function drawMeltingEffect() {
+        function drawMeltingScreen() {
             if (isGameOver) {
                 ctx.fillStyle = '#FFD700';
-                meltingCheese.forEach(drop => {
-                    drop.y += drop.speed;
-                    drop.width = Math.max(drop.width + Math.random() * 0.5, 0);
-                    if (drop.y < canvas.height) {
-                        ctx.fillRect(drop.x, drop.y, drop.width, drop.height);
-                    }
-                });
-            }
-        }
-
-        function startMelting(x, y) {
-            for (let i = 0; i < 20; i++) {
-                meltingCheese.push({
-                    x: x + (Math.random() - 0.5) * player.width,
-                    y: y,
-                    width: 5,
-                    height: 10,
-                    speed: 2 + Math.random() * 2
+                meltColumns.forEach(column => {
+                    column.y += column.speed;
+                    ctx.fillRect(column.x, 0, column.width, column.y);
                 });
             }
         }
@@ -197,7 +194,7 @@
                     width: player.width,
                     height: player.height
                 })) {
-                    startMelting(player.x - player.width/2, player.y);
+                    initMeltColumns();
                     gameOver();
                 }
             });
@@ -285,7 +282,7 @@
             drawTacos();
             drawPowerUps();
             drawCheese();
-            drawMeltingEffect();
+            drawMeltingScreen();
             gameLoop = requestAnimationFrame(gameFrame);
         }
 
