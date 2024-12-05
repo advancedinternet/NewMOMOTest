@@ -10,14 +10,12 @@
         #score { top: 20px; left: 20px; }
         #highScore { top: 20px; right: 20px; }
         #level { top: 20px; left: 50%; transform: translateX(-50%); }
-        #gameOver { display: none; position: absolute; color: #FF0000; font-size: 48px; text-align: center; }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
     <div id="level">Level: 1</div>
-    <div id="gameOver">KABOOM!</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -25,14 +23,13 @@
         const scoreElement = document.getElementById('score');
         const highScoreElement = document.getElementById('highScore');
         const levelElement = document.getElementById('level');
-        const gameOverElement = document.getElementById('gameOver');
         
         let score = 0;
         let highScore = localStorage.getItem('highScore') || 0;
         let level = 1;
         let powerUpActive = false;
         let isGameOver = false;
-        let explosionParticles = [];
+        let meltProgress = 0;
         
         const player = {
             x: canvas.width / 2,
@@ -47,47 +44,13 @@
         const tacos = [];
         const powerUps = [];
         const cheeseDrops = [];
+        const meltingCheese = [];
         
         const tacoTypes = [
             { color: '#FFD700', points: 10, cheeseRate: 0.001 },
             { color: '#FF4500', points: 20, cheeseRate: 0.002 },
             { color: '#32CD32', points: 30, cheeseRate: 0.003 }
         ];
-
-        function createExplosion(x, y) {
-            for (let i = 0; i < 50; i++) {
-                explosionParticles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 60,
-                    size: Math.random() * 5 + 2,
-                    color: '#FFD700'
-                });
-            }
-        }
-
-        function updateExplosion() {
-            for (let i = explosionParticles.length - 1; i >= 0; i--) {
-                const particle = explosionParticles[i];
-                particle.x += particle.vx;
-                particle.y += particle.vy;
-                particle.life--;
-                if (particle.life <= 0) {
-                    explosionParticles.splice(i, 1);
-                }
-            }
-        }
-
-        function drawExplosion() {
-            explosionParticles.forEach(particle => {
-                ctx.fillStyle = particle.color;
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
 
         function initLevel() {
             const rows = 3 + Math.min(level, 3);
@@ -116,8 +79,8 @@
                     cheeseDrops.push({
                         x: taco.x + taco.width/2,
                         y: taco.y + taco.height,
-                        width: 10,
-                        height: 10,
+                        width: 15,
+                        height: 15,
                         speed: 3 + Math.random() * 2
                     });
                 }
@@ -165,10 +128,33 @@
         function drawCheese() {
             ctx.fillStyle = '#FFD700';
             cheeseDrops.forEach(cheese => {
-                ctx.beginPath();
-                ctx.arc(cheese.x, cheese.y, 5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillRect(cheese.x - cheese.width/2, cheese.y - cheese.height/2, cheese.width, cheese.height);
             });
+        }
+
+        function drawMeltingEffect() {
+            if (isGameOver) {
+                ctx.fillStyle = '#FFD700';
+                meltingCheese.forEach(drop => {
+                    drop.y += drop.speed;
+                    drop.width = Math.max(drop.width + Math.random() * 0.5, 0);
+                    if (drop.y < canvas.height) {
+                        ctx.fillRect(drop.x, drop.y, drop.width, drop.height);
+                    }
+                });
+            }
+        }
+
+        function startMelting(x, y) {
+            for (let i = 0; i < 20; i++) {
+                meltingCheese.push({
+                    x: x + (Math.random() - 0.5) * player.width,
+                    y: y,
+                    width: 5,
+                    height: 10,
+                    speed: 2 + Math.random() * 2
+                });
+            }
         }
 
         function drawPowerUps() {
@@ -179,10 +165,7 @@
         }
 
         function update() {
-            if (isGameOver) {
-                updateExplosion();
-                return;
-            }
+            if (isGameOver) return;
 
             if (powerUpActive && Date.now() > player.powerUpTime) {
                 powerUpActive = false;
@@ -214,8 +197,8 @@
                     width: player.width,
                     height: player.height
                 })) {
-                    createExplosion(player.x, player.y);
-                    gameOver('KABOOM!');
+                    startMelting(player.x - player.width/2, player.y);
+                    gameOver();
                 }
             });
 
@@ -269,7 +252,7 @@
 
             tacos.forEach(taco => {
                 if (taco.y + taco.height > player.y) {
-                    gameOver('GAME OVER');
+                    gameOver();
                 }
             });
 
@@ -287,10 +270,8 @@
                    rect1.y + rect1.height > rect2.y;
         }
 
-        function gameOver(message) {
+        function gameOver() {
             isGameOver = true;
-            gameOverElement.textContent = message;
-            gameOverElement.style.display = 'block';
         }
 
         let gameLoop;
@@ -304,7 +285,7 @@
             drawTacos();
             drawPowerUps();
             drawCheese();
-            drawExplosion();
+            drawMeltingEffect();
             gameLoop = requestAnimationFrame(gameFrame);
         }
 
