@@ -6,18 +6,16 @@
     <style>
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif; }
         #gameCanvas { border: 2px solid #4a4a4a; background: #111; }
-        #score, #highScore, #level, #lives { position: absolute; color: #fff; font-size: 20px; }
+        #score, #highScore, #level { position: absolute; color: #fff; font-size: 20px; }
         #score { top: 20px; left: 20px; }
         #highScore { top: 20px; right: 20px; }
         #level { top: 20px; left: 50%; transform: translateX(-50%); }
-        #lives { top: 50px; left: 20px; }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
     <div id="level">Level: 1</div>
-    <div id="lives">Lives: 3</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -25,12 +23,10 @@
         const scoreElement = document.getElementById('score');
         const highScoreElement = document.getElementById('highScore');
         const levelElement = document.getElementById('level');
-        const livesElement = document.getElementById('lives');
         
         let score = 0;
         let highScore = localStorage.getItem('highScore') || 0;
         let level = 1;
-        let lives = 3;
         let powerUpActive = false;
         
         const player = {
@@ -39,9 +35,7 @@
             width: 50,
             height: 30,
             speed: 5,
-            powerUpTime: 0,
-            invulnerable: false,
-            invulnerableTime: 0
+            powerUpTime: 0
         };
 
         const bullets = [];
@@ -103,7 +97,7 @@
         }
 
         function drawPlayer() {
-            ctx.fillStyle = player.invulnerable ? '#808080' : (powerUpActive ? '#FF0000' : '#8B4513');
+            ctx.fillStyle = powerUpActive ? '#FF0000' : '#8B4513';
             ctx.fillRect(player.x - player.width/2, player.y, player.width, player.height);
         }
 
@@ -142,26 +136,9 @@
             });
         }
 
-        function playerHit() {
-            if (!player.invulnerable) {
-                lives--;
-                livesElement.textContent = `Lives: ${lives}`;
-                player.invulnerable = true;
-                player.invulnerableTime = Date.now() + 2000;
-
-                if (lives <= 0) {
-                    gameOver();
-                }
-            }
-        }
-
         function update() {
             if (powerUpActive && Date.now() > player.powerUpTime) {
                 powerUpActive = false;
-            }
-
-            if (player.invulnerable && Date.now() > player.invulnerableTime) {
-                player.invulnerable = false;
             }
 
             spawnPowerUp();
@@ -190,8 +167,7 @@
                     width: player.width,
                     height: player.height
                 })) {
-                    cheeseDrops.splice(index, 1);
-                    playerHit();
+                    gameOver(); // Instant death on cheese hit
                 }
             });
 
