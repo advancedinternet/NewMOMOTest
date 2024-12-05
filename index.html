@@ -10,12 +10,14 @@
         #score { top: 20px; left: 20px; }
         #highScore { top: 20px; right: 20px; }
         #level { top: 20px; left: 50%; transform: translateX(-50%); }
+        #gameOver { display: none; position: absolute; color: #FF0000; font-size: 48px; text-align: center; }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
     <div id="level">Level: 1</div>
+    <div id="gameOver">MELTED BY CHEESE!</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -23,11 +25,13 @@
         const scoreElement = document.getElementById('score');
         const highScoreElement = document.getElementById('highScore');
         const levelElement = document.getElementById('level');
+        const gameOverElement = document.getElementById('gameOver');
         
         let score = 0;
         let highScore = localStorage.getItem('highScore') || 0;
         let level = 1;
         let powerUpActive = false;
+        let isGameOver = false;
         
         const player = {
             x: canvas.width / 2,
@@ -97,8 +101,10 @@
         }
 
         function drawPlayer() {
-            ctx.fillStyle = powerUpActive ? '#FF0000' : '#8B4513';
-            ctx.fillRect(player.x - player.width/2, player.y, player.width, player.height);
+            if (!isGameOver) {
+                ctx.fillStyle = powerUpActive ? '#FF0000' : '#8B4513';
+                ctx.fillRect(player.x - player.width/2, player.y, player.width, player.height);
+            }
         }
 
         function drawBullets() {
@@ -137,6 +143,8 @@
         }
 
         function update() {
+            if (isGameOver) return;
+
             if (powerUpActive && Date.now() > player.powerUpTime) {
                 powerUpActive = false;
             }
@@ -167,7 +175,8 @@
                     width: player.width,
                     height: player.height
                 })) {
-                    gameOver(); // Instant death on cheese hit
+                    cheeseDrops.splice(index, 1);
+                    gameOver('MELTED BY CHEESE!');
                 }
             });
 
@@ -221,7 +230,7 @@
 
             tacos.forEach(taco => {
                 if (taco.y + taco.height > player.y) {
-                    gameOver();
+                    gameOver('TACOS REACHED EARTH!');
                 }
             });
 
@@ -239,11 +248,22 @@
                    rect1.y + rect1.height > rect2.y;
         }
 
-        function gameOver() {
+        function gameOver(message) {
+            isGameOver = true;
             cancelAnimationFrame(gameLoop);
-            ctx.fillStyle = '#FF0000';
-            ctx.font = '48px Arial';
-            ctx.fillText('Game Over!', canvas.width/2 - 100, canvas.height/2);
+            gameOverElement.textContent = message;
+            gameOverElement.style.display = 'block';
+
+            // Cheese melting effect
+            if (message === 'MELTED BY CHEESE!') {
+                let meltHeight = 0;
+                const meltInterval = setInterval(() => {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(player.x - player.width/2, player.y, player.width, meltHeight);
+                    meltHeight += 2;
+                    if (meltHeight > 100) clearInterval(meltInterval);
+                }, 50);
+            }
         }
 
         let gameLoop;
@@ -261,6 +281,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
             keys[e.key] = true;
             if (e.key === ' ') {
                 bullets.push({
